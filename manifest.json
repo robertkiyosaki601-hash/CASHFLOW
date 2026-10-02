@@ -1,0 +1,10 @@
+{
+  "name": "CASHFLOW — Income & Expense Tracker",
+  "short_name": "CASHFLOW",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#0f172a",
+  "description": "रोज़ की Income, Expense और Balance का हिसाब",
+  "icons": []
+}

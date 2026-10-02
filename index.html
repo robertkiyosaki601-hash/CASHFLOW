@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Income Expense Tracker</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f3f4f6;color:#111827}
+.container{max-width:720px;margin:auto;padding:16px}.appbar{background:#111827;color:#fff;padding:18px 16px;margin:-16px -16px 16px;border-radius:0 0 18px 18px}
+h1{margin:0;font-size:23px}.sub{opacity:.75;font-size:13px;margin-top:4px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.card{background:#fff;padding:13px 10px;border-radius:14px;box-shadow:0 2px 8px #0000000d}.label{font-size:12px;color:#6b7280}.value{font-size:18px;font-weight:800;margin-top:4px}
+.income{color:#15803d}.expense{color:#dc2626}.balance{color:#2563eb}
+.panel{background:#fff;border-radius:16px;padding:15px;margin-top:14px;box-shadow:0 2px 8px #0000000d}
+h2{font-size:17px;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input,select,button{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font:inherit;background:#fff}
+button{border:0;font-weight:700;cursor:pointer}.primary{background:#111827;color:#fff}.secondary{background:#e5e7eb;color:#111827}
+.full{grid-column:1/-1}.row{display:flex;gap:8px}.row>*{flex:1}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.item{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:9px}.itemtop{display:flex;justify-content:space-between;gap:10px}.date{font-size:12px;color:#6b7280}.desc{font-weight:700;margin-top:2px}.cat{font-size:12px;color:#6b7280}.amount{font-weight:800;white-space:nowrap}.actions{display:flex;gap:7px;margin-top:9px}.actions button{padding:8px;font-size:13px}.empty{text-align:center;color:#6b7280;padding:20px}
+@media(max-width:430px){.cards{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.filters{grid-template-columns:1fr}}
+</style>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0f172a"></head>
+<body>
+<div class="container">
+<header class="appbar">
+<h1>💰 CASHFLOW — Income & Expense Tracker</h1><div class="sub">आपका रोज़ का कमाई और खर्च का हिसाब</div>
+</header>
+
+<section class="cards">
+<div class="card"><div class="label">कुल Income</div><div id="totalIncome" class="value income">₹0</div></div>
+<div class="card"><div class="label">कुल Expense</div><div id="totalExpense" class="value expense">₹0</div></div>
+<div class="card"><div class="label">Balance</div><div id="balance" class="value balance">₹0</div></div>
+</section>
+
+<section class="panel">
+<h2 id="formTitle">नई Entry</h2>
+<div class="grid">
+<select id="type"><option value="income">Income</option><option value="expense">Expense</option></select>
+<input id="date" type="date">
+<input id="amount" type="number" min="0" step="0.01" placeholder="रकम ₹">
+<input id="category" list="categories" placeholder="Category">
+<datalist id="categories">
+<option value="Business"><option value="Sales"><option value="Salary"><option value="Other Income">
+<option value="Food"><option value="Travel"><option value="Shopping"><option value="Bills"><option value="Material"><option value="Other Expense">
+</datalist>
+<input id="note" class="full" placeholder="Note / विवरण">
+<div class="row full"><button class="primary" onclick="saveEntry()">Entry Save</button><button id="cancelBtn" class="secondary" onclick="cancelEdit()" style="display:none">Cancel</button></div>
+</div>
+</section>
+
+<section class="panel">
+<h2>Entries</h2>
+<div class="filters"><input id="search" placeholder="🔍 Search..." oninput="render()"><select id="filterType" onchange="render()"><option value="all">All</option><option value="income">Income</option><option value="expense">Expense</option></select></div>
+<div id="entries"></div>
+</section>
+
+<section class="panel">
+<div class="row"><button class="secondary" onclick="exportData()">Export JSON</button><button class="secondary" onclick="clearAll()">Clear All</button></div>
+</section>
+</div>
+
+<script>
+const KEY='incomeExpenseTracker_v1';
+let entries=JSON.parse(localStorage.getItem(KEY)||'[]');
+let editId=null;
+const $=id=>document.getElementById(id);
+function today(){return new Date().toISOString().slice(0,10)}
+$('date').value=today();
+
+function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2})}
+function save(){
+ localStorage.setItem(KEY,JSON.stringify(entries));
+}
+function saveEntry(){
+ const type=$('type').value, amount=Number($('amount').value), date=$('date').value;
+ if(!amount||amount<0||!date){alert('Date और सही Amount भरें।');return}
+ const data={id:editId||Date.now(),type,amount,date,category:$('category').value.trim()||'General',note:$('note').value.trim()};
+ if(editId) entries=entries.map(x=>x.id===editId?data:x); else entries.unshift(data);
+ save(); resetForm(); render();
+}
+function resetForm(){
+ editId=null;$('formTitle').textContent='नई Entry';$('type').value='income';$('amount').value='';$('category').value='';$('note').value='';$('date').value=today();$('cancelBtn').style.display='none';
+}
+function editEntry(id){
+ const x=entries.find(e=>e.id===id); if(!x)return;
+ editId=id;$('formTitle').textContent='Entry Edit करें';$('type').value=x.type;$('amount').value=x.amount;$('category').value=x.category;$('note').value=x.note;$('date').value=x.date;$('cancelBtn').style.display='block';scrollTo({top:0,behavior:'smooth'});
+}
+function deleteEntry(id){
+ if(confirm('यह entry delete करें?')){entries=entries.filter(x=>x.id!==id);save();render();}
+}
+function cancelEdit(){resetForm()}
+function render(){
+ const income=entries.filter(x=>x.type==='income').reduce((s,x)=>s+x.amount,0);
+ const expense=entries.filter(x=>x.type==='expense').reduce((s,x)=>s+x.amount,0);
+ $('totalIncome').textContent=money(income);$('totalExpense').textContent=money(expense);$('balance').textContent=money(income-expense);
+ const q=$('search').value.toLowerCase(), ft=$('filterType').value;
+ const list=entries.filter(x=>(ft==='all'||x.type===ft)&&(`${x.category} ${x.note} ${x.amount}`.toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
+ if(!list.length){$('entries').innerHTML='<div class="empty">अभी कोई entry नहीं है।</div>';return}
+ $('entries').innerHTML=list.map(x=>`
+ <div class="item">
+  <div class="itemtop"><div><div class="date">${x.date}</div><div class="desc">${escapeHtml(x.note||x.category)}</div><div class="cat">${escapeHtml(x.category)}</div></div>
+  <div class="amount ${x.type}">${x.type==='income'?'+':'-'}${money(x.amount)}</div></div>
+  <div class="actions"><button class="secondary" onclick="editEntry(${x.id})">Edit</button><button class="secondary" onclick="deleteEntry(${x.id})">Delete</button></div>
+ </div>`).join('');
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function exportData(){
+ const blob=new Blob([JSON.stringify(entries,null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='income-expense-backup.json';a.click();URL.revokeObjectURL(a.href);
+}
+function clearAll(){
+ if(confirm('सारी entries permanently हटानी हैं?')){entries=[];save();render();}
+}
+render();
+</script>
+<script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
